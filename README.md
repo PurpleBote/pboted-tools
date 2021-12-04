@@ -1,7 +1,7 @@
-# Utils
+# pboted tools
 
-Here you can find some useful utilities for working with **pboted**.   
-The functionality of some of them will be implemented in **pboted-cli**.   
+Here you can find some useful utilities for working with [pboted](https://github.com/polistern/pboted).   
+The functionality of some of them will be implemented in **pbotectl**.   
 
 ## List of utilities
 
