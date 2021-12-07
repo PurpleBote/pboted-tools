@@ -34,4 +34,3 @@ Full case:
 ```
 ./create_identity.py -n john_doe -a 2 -p /path/to/image.png -d "John main identity" -f /path/to/identities.txt
 ```
-

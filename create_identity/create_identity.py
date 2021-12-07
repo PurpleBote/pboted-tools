@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 __title__ = 'Create Bote Identity'
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __author__ = "polistern"
 __maintainer__ = "polistern"
 __status__ = "Production"
@@ -12,10 +12,10 @@ import datetime
 import sys
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
-
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
-
+from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives.asymmetric import x25519
 from pathlib import Path
 
 
@@ -150,69 +150,128 @@ def write_to_file(filepath, identities, default_):
                          f'{identities[identity][PREF_SALT]}\n\n')
 
 
-def generate_ecdsa_256():
-    # ECDSA256_COMPLETE_BASE64_LENGTH = 172;
-    # ECDSA256_COMPLETE_BASE64_PUBLIC_PART_LENGTH = 86;
+def generate_ecdh_ecdsa_256():
+    # ECDH256_ECDSA256_COMPLETE_BASE64_LENGTH = 172;
+    # ECDH256_ECDSA256_PUBLIC_BASE64_LENGTH = 86;
     key_length_byte = 33
 
-    private_key_1 = ec.generate_private_key(ec.SECP256R1())
-    private_key_1_bytes = private_key_1.private_numbers().private_value.to_bytes(key_length_byte, byteorder='big')
+    crypto_private_key = ec.generate_private_key(ec.SECP256R1())
+    crypto_private_key_bytes = crypto_private_key.private_numbers().private_value.to_bytes(key_length_byte,
+                                                                                           byteorder='big')
+    crypto_public_key = crypto_private_key.public_key()
+    crypto_public_key_bytes = crypto_public_key.public_bytes(encoding=serialization.Encoding.X962,
+                                                             format=serialization.PublicFormat.CompressedPoint)
 
-    public_key_1 = private_key_1.public_key()
-    public_key_1_bytes = public_key_1.public_bytes(encoding=serialization.Encoding.X962,
-                                                   format=serialization.PublicFormat.CompressedPoint)
+    crypto_private_key_byte_base_str = base64.b64encode(crypto_private_key_bytes, altchars=b'-~').decode("utf-8")
+    crypto_public_key_bytes_base_str = base64.b64encode(crypto_public_key_bytes, altchars=b'-~').decode("utf-8")
 
-    private_key_1_byte_base_str = base64.b64encode(private_key_1_bytes, altchars=b'-~').decode("utf-8")
-    public_key_1_bytes_base_str = base64.b64encode(public_key_1_bytes, altchars=b'-~').decode("utf-8")
+    signing_private_key = ec.generate_private_key(ec.SECP256R1())
+    signing_private_key_bytes = signing_private_key.private_numbers().private_value.to_bytes(key_length_byte,
+                                                                                             byteorder='big')
+    signing_public_key = signing_private_key.public_key()
+    signing_public_key_bytes = signing_public_key.public_bytes(encoding=serialization.Encoding.X962,
+                                                               format=serialization.PublicFormat.CompressedPoint)
 
-    private_key_2 = ec.generate_private_key(ec.SECP256R1())
-    private_key_2_bytes = private_key_2.private_numbers().private_value.to_bytes(key_length_byte, byteorder='big')
+    signing_private_key_byte_base_str = base64.b64encode(signing_private_key_bytes, altchars=b'-~').decode("utf-8")
+    signing_public_key_bytes_base_str = base64.b64encode(signing_public_key_bytes, altchars=b'-~').decode("utf-8")
 
-    public_key_2 = private_key_2.public_key()
-    public_key_2_bytes = public_key_2.public_bytes(encoding=serialization.Encoding.X962,
-                                                   format=serialization.PublicFormat.CompressedPoint)
+    public_keys = f'{crypto_public_key_bytes_base_str[1:]}{signing_public_key_bytes_base_str[1:]}'
+    private_keys = f'{crypto_private_key_byte_base_str[1:]}{signing_private_key_byte_base_str[1:]}'
 
-    private_key_2_byte_base_str = base64.b64encode(private_key_2_bytes, altchars=b'-~').decode("utf-8")
-    public_key_2_bytes_base_str = base64.b64encode(public_key_2_bytes, altchars=b'-~').decode("utf-8")
+    return f'{public_keys}{private_keys}'
 
-    public_key = f'{public_key_1_bytes_base_str[1:]}{public_key_2_bytes_base_str[1:]}'
-    private_key = f'{private_key_1_byte_base_str[1:]}{private_key_2_byte_base_str[1:]}'
 
-    return f'{public_key}{private_key}'
+def generate_ecdh_ecdsa_521():
+    # ECDH521_ECDSA521_COMPLETE_BASE64_LENGTH = 348;
+    # ECDH521_ECDSA521_PUBLIC_BASE64_LENGTH = 174;
+    key_length_byte = 66
+
+    crypto_private_key = ec.generate_private_key(ec.SECP521R1())
+    crypto_private_key_bytes = crypto_private_key.private_numbers().private_value.to_bytes(key_length_byte,
+                                                                                           byteorder='big')
+    crypto_public_key = crypto_private_key.public_key()
+    crypto_public_key_bytes = crypto_public_key.public_bytes(encoding=serialization.Encoding.X962,
+                                                             format=serialization.PublicFormat.CompressedPoint)
+
+    crypto_private_key_byte_base_str = base64.b64encode(crypto_private_key_bytes, altchars=b'-~').decode("utf-8")
+    crypto_public_key_bytes_base_str = base64.b64encode(crypto_public_key_bytes, altchars=b'-~').decode("utf-8")
+
+    signing_private_key = ec.generate_private_key(ec.SECP521R1())
+    signing_private_key_bytes = signing_private_key.private_numbers().private_value.to_bytes(key_length_byte,
+                                                                                             byteorder='big')
+    signing_public_key = signing_private_key.public_key()
+    signing_public_key_bytes = signing_public_key.public_bytes(encoding=serialization.Encoding.X962,
+                                                               format=serialization.PublicFormat.CompressedPoint)
+
+    signing_private_key_byte_base_str = base64.b64encode(signing_private_key_bytes, altchars=b'-~').decode("utf-8")
+    signing_public_key_bytes_base_str = base64.b64encode(signing_public_key_bytes, altchars=b'-~').decode("utf-8")
+
+    public_keys = f'{crypto_public_key_bytes_base_str[1:]}{signing_public_key_bytes_base_str[1:]}'
+    private_keys = f'{crypto_private_key_byte_base_str[1:]}{signing_private_key_byte_base_str[1:]}'
+
+    return f'{public_keys}{private_keys}'
+
+
+def generate_x25519_ed25519():
+    # X25519_ED25519_COMPLETE_BASE64_LENGTH = 176;
+    # X25519_ED25519_PUBLIC_BASE64_LENGTH = 88;
+
+    crypto_private_key = x25519.X25519PrivateKey.generate()
+    crypto_private_key_bytes = crypto_private_key.private_bytes(encoding=serialization.Encoding.Raw,
+                                                                format=serialization.PrivateFormat.Raw,
+                                                                encryption_algorithm=serialization.NoEncryption())
+    crypto_public_key = crypto_private_key.public_key()
+    crypto_public_key_bytes = crypto_public_key.public_bytes(encoding=serialization.Encoding.Raw,
+                                                             format=serialization.PublicFormat.Raw)
+
+    crypto_private_key_byte_base_str = base64.b64encode(crypto_private_key_bytes, altchars=b'-~').decode("utf-8")
+    crypto_public_key_bytes_base_str = base64.b64encode(crypto_public_key_bytes, altchars=b'-~').decode("utf-8")
+
+    signing_private_key = ed25519.Ed25519PrivateKey.generate()
+    signing_private_key_bytes = signing_private_key.private_bytes(encoding=serialization.Encoding.Raw,
+                                                                  format=serialization.PrivateFormat.Raw,
+                                                                  encryption_algorithm=serialization.NoEncryption())
+    signing_public_key = signing_private_key.public_key()
+    signing_public_key_bytes = signing_public_key.public_bytes(encoding=serialization.Encoding.Raw,
+                                                               format=serialization.PublicFormat.Raw)
+
+    signing_private_key_byte_base_str = base64.b64encode(signing_private_key_bytes, altchars=b'-~').decode("utf-8")
+    signing_public_key_bytes_base_str = base64.b64encode(signing_public_key_bytes, altchars=b'-~').decode("utf-8")
+
+    private_keys = f'{crypto_private_key_byte_base_str}{signing_private_key_byte_base_str}'
+    public_keys = f'{crypto_public_key_bytes_base_str}{signing_public_key_bytes_base_str}'
+
+    return f'{public_keys}{private_keys}'
 
 
 def generate_address(alg):
     if alg == 2:
-        return generate_ecdsa_256()
+        return generate_ecdh_ecdsa_256()
+    if alg == 3:
+        return generate_ecdh_ecdsa_521()
+    if alg == 5:
+        return generate_x25519_ed25519()
     else:
         error('Unsupported crypto algorithm')
 
 
 if __name__ == '__main__':
+    print(f"{__title__} v{__version__}")
+
     parser = ArgumentParser(
         description=__title__,
         formatter_class=RawDescriptionHelpFormatter
     )
 
-    parser.add_argument('-v', '--version', default=None, action='store_true', help='Print version and exit.')
-    parser.add_argument('-n', '--name', help='The public name of the identity, included in emails.')
-    parser.add_argument('-a', '--algorithm', help='Encryption and signature algorithm. For now only 2', default=2)
+    parser.add_argument('-n', '--name', required=True, help='The public name of the identity, included in emails.')
+    parser.add_argument('-a', '--algorithm', choices=[2], help='Encryption and signature algorithm (default: 2)',
+                        default=2)
     parser.add_argument('-p', '--picture', help='Path to image file')
     parser.add_argument('-d', '--description', help='Description of the identity, only displayed locally.')
-    parser.add_argument('-f', '--filename', help='Full path to current identities file.', default='identities.txt')
+    parser.add_argument('-f', '--filename', help='Full path to current identities file (default: identities.txt)',
+                        default='identities.txt')
 
     arguments = vars(parser.parse_args())
-
-    if arguments['version']:
-        print("{}".format(__title__))
-        print("v{}".format(__version__))
-        exit(0)
-
-    if not arguments['name']:
-        error('--name not specified')
-
-    if not arguments['algorithm']:
-        error('--algorithm not specified')
 
     default, identities_names, identities_ids, current_identities = load_identities(arguments['filename'],
                                                                                     identity_template)
