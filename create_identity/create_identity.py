@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 __title__ = 'Create Bote Identity'
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __author__ = "polistern"
 __maintainer__ = "polistern"
 __status__ = "Production"
@@ -116,19 +116,26 @@ def fill_new_identity(template, args):
 def write_to_file(filepath, identities, default_):
     with open(filepath, 'w') as output:
         output.write(datetime.datetime.utcnow().strftime('# %a %b %d %H:%M:%S UTC %Y\n\n'))
-        output.write('# If you need to change default identity comment current default '
+        output.write('# If you need to change default identity - comment current default '
                      'and uncomment one of the follow\n')
 
         for identity in identities:
             output.write(f'#{identities[identity]["publicName"]}\n')
+
+            pub_key_part_len = 0
+            if len(identities[identity]["key"]) == 172:
+                pub_key_part_len = 86
+            elif len(identities[identity]["key"]) == 348:
+                pub_key_part_len = 174
+
             if default_:
-                if default_ == identities[identity]["key"][:86]:
-                    output.write(f'default={identities[identity]["key"][:86]}\n')
+                if default_ == identities[identity]["key"][:pub_key_part_len]:
+                    output.write(f'default={identities[identity]["key"][:pub_key_part_len]}\n')
                 else:
-                    output.write(f'#default={identities[identity]["key"][:86]}\n')
+                    output.write(f'#default={identities[identity]["key"][:pub_key_part_len]}\n')
             else:
-                default_ = identities[identity]["key"][:86]
-                output.write(f'default={identities[identity]["key"][:86]}\n')
+                default_ = identities[identity]["key"][:pub_key_part_len]
+                output.write(f'default={identities[identity]["key"][:pub_key_part_len]}\n')
         output.write('\n')
 
         for identity in identities:
@@ -155,28 +162,26 @@ def generate_ecdh_ecdsa_256():
     # ECDH256_ECDSA256_PUBLIC_BASE64_LENGTH = 86;
     key_length_byte = 33
 
-    crypto_private_key = ec.generate_private_key(ec.SECP256R1())
-    crypto_private_key_bytes = crypto_private_key.private_numbers().private_value.to_bytes(key_length_byte,
-                                                                                           byteorder='big')
-    crypto_public_key = crypto_private_key.public_key()
-    crypto_public_key_bytes = crypto_public_key.public_bytes(encoding=serialization.Encoding.X962,
-                                                             format=serialization.PublicFormat.CompressedPoint)
+    crypto_priv_key = ec.generate_private_key(ec.SECP256R1())
+    crypto_priv_key_bytes = crypto_priv_key.private_numbers().private_value.to_bytes(key_length_byte, byteorder='big')
+    crypto_pub_key = crypto_priv_key.public_key()
+    crypto_pub_key_bytes = crypto_pub_key.public_bytes(encoding=serialization.Encoding.X962,
+                                                       format=serialization.PublicFormat.CompressedPoint)
 
-    crypto_private_key_byte_base_str = base64.b64encode(crypto_private_key_bytes, altchars=b'-~').decode("utf-8")
-    crypto_public_key_bytes_base_str = base64.b64encode(crypto_public_key_bytes, altchars=b'-~').decode("utf-8")
+    crypto_priv_key_byte_base_str = base64.b64encode(crypto_priv_key_bytes, altchars=b'-~').decode("utf-8")
+    crypto_pub_key_bytes_base_str = base64.b64encode(crypto_pub_key_bytes, altchars=b'-~').decode("utf-8")
 
-    signing_private_key = ec.generate_private_key(ec.SECP256R1())
-    signing_private_key_bytes = signing_private_key.private_numbers().private_value.to_bytes(key_length_byte,
-                                                                                             byteorder='big')
-    signing_public_key = signing_private_key.public_key()
-    signing_public_key_bytes = signing_public_key.public_bytes(encoding=serialization.Encoding.X962,
-                                                               format=serialization.PublicFormat.CompressedPoint)
+    signing_priv_key = ec.generate_private_key(ec.SECP256R1())
+    signing_priv_key_bytes = signing_priv_key.private_numbers().private_value.to_bytes(key_length_byte, byteorder='big')
+    signing_pub_key = signing_priv_key.public_key()
+    signing_pub_key_bytes = signing_pub_key.public_bytes(encoding=serialization.Encoding.X962,
+                                                         format=serialization.PublicFormat.CompressedPoint)
 
-    signing_private_key_byte_base_str = base64.b64encode(signing_private_key_bytes, altchars=b'-~').decode("utf-8")
-    signing_public_key_bytes_base_str = base64.b64encode(signing_public_key_bytes, altchars=b'-~').decode("utf-8")
+    signing_priv_key_byte_base_str = base64.b64encode(signing_priv_key_bytes, altchars=b'-~').decode("utf-8")
+    signing_pub_key_bytes_base_str = base64.b64encode(signing_pub_key_bytes, altchars=b'-~').decode("utf-8")
 
-    public_keys = f'{crypto_public_key_bytes_base_str[1:]}{signing_public_key_bytes_base_str[1:]}'
-    private_keys = f'{crypto_private_key_byte_base_str[1:]}{signing_private_key_byte_base_str[1:]}'
+    public_keys = f'{crypto_pub_key_bytes_base_str[1:]}{signing_pub_key_bytes_base_str[1:]}'
+    private_keys = f'{crypto_priv_key_byte_base_str[1:]}{signing_priv_key_byte_base_str[1:]}'
 
     return f'{public_keys}{private_keys}'
 
@@ -186,28 +191,33 @@ def generate_ecdh_ecdsa_521():
     # ECDH521_ECDSA521_PUBLIC_BASE64_LENGTH = 174;
     key_length_byte = 66
 
-    crypto_private_key = ec.generate_private_key(ec.SECP521R1())
-    crypto_private_key_bytes = crypto_private_key.private_numbers().private_value.to_bytes(key_length_byte,
-                                                                                           byteorder='big')
-    crypto_public_key = crypto_private_key.public_key()
-    crypto_public_key_bytes = crypto_public_key.public_bytes(encoding=serialization.Encoding.X962,
-                                                             format=serialization.PublicFormat.CompressedPoint)
+    crypto_priv_key = ec.generate_private_key(ec.SECP521R1())
+    crypto_priv_key_bytes = crypto_priv_key.private_numbers().private_value.to_bytes(key_length_byte, byteorder='big')
+    crypto_pub_key = crypto_priv_key.public_key()
+    crypto_pub_key_bytes = crypto_pub_key.public_bytes(encoding=serialization.Encoding.X962,
+                                                       format=serialization.PublicFormat.CompressedPoint)
 
-    crypto_private_key_byte_base_str = base64.b64encode(crypto_private_key_bytes, altchars=b'-~').decode("utf-8")
-    crypto_public_key_bytes_base_str = base64.b64encode(crypto_public_key_bytes, altchars=b'-~').decode("utf-8")
+    crypto_pub_key_bytes_compress = bytearray(crypto_pub_key_bytes[1:])
+    crypto_pub_key_bytes_compress[0] |= (crypto_pub_key_bytes[0] - 2) << 1
 
-    signing_private_key = ec.generate_private_key(ec.SECP521R1())
-    signing_private_key_bytes = signing_private_key.private_numbers().private_value.to_bytes(key_length_byte,
-                                                                                             byteorder='big')
-    signing_public_key = signing_private_key.public_key()
-    signing_public_key_bytes = signing_public_key.public_bytes(encoding=serialization.Encoding.X962,
-                                                               format=serialization.PublicFormat.CompressedPoint)
+    crypto_priv_key_byte_base_str = base64.b64encode(crypto_priv_key_bytes, altchars=b'-~').decode("utf-8")
+    crypto_pub_key_bytes_base_str = base64.b64encode(crypto_pub_key_bytes_compress, altchars=b'-~').decode("utf-8")
 
-    signing_private_key_byte_base_str = base64.b64encode(signing_private_key_bytes, altchars=b'-~').decode("utf-8")
-    signing_public_key_bytes_base_str = base64.b64encode(signing_public_key_bytes, altchars=b'-~').decode("utf-8")
+    signing_priv_key = ec.generate_private_key(ec.SECP521R1())
+    signing_priv_key_bytes = signing_priv_key.private_numbers().private_value.to_bytes(key_length_byte, byteorder='big')
 
-    public_keys = f'{crypto_public_key_bytes_base_str[1:]}{signing_public_key_bytes_base_str[1:]}'
-    private_keys = f'{crypto_private_key_byte_base_str[1:]}{signing_private_key_byte_base_str[1:]}'
+    signing_pub_key = signing_priv_key.public_key()
+    signing_pub_key_bytes = signing_pub_key.public_bytes(encoding=serialization.Encoding.X962,
+                                                         format=serialization.PublicFormat.CompressedPoint)
+
+    signing_pub_key_bytes_compress = bytearray(signing_pub_key_bytes[1:])
+    signing_pub_key_bytes_compress[0] |= (signing_pub_key_bytes[0] - 2) << 1
+
+    signing_priv_key_byte_base_str = base64.b64encode(signing_priv_key_bytes, altchars=b'-~').decode("utf-8")
+    signing_pub_key_bytes_base_str = base64.b64encode(signing_pub_key_bytes_compress, altchars=b'-~').decode("utf-8")
+
+    public_keys = f'{crypto_pub_key_bytes_base_str[1:]}{signing_pub_key_bytes_base_str[1:]}'
+    private_keys = f'{crypto_priv_key_byte_base_str[1:]}{signing_priv_key_byte_base_str[1:]}'
 
     return f'{public_keys}{private_keys}'
 
@@ -216,30 +226,30 @@ def generate_x25519_ed25519():
     # X25519_ED25519_COMPLETE_BASE64_LENGTH = 176;
     # X25519_ED25519_PUBLIC_BASE64_LENGTH = 88;
 
-    crypto_private_key = x25519.X25519PrivateKey.generate()
-    crypto_private_key_bytes = crypto_private_key.private_bytes(encoding=serialization.Encoding.Raw,
-                                                                format=serialization.PrivateFormat.Raw,
-                                                                encryption_algorithm=serialization.NoEncryption())
-    crypto_public_key = crypto_private_key.public_key()
-    crypto_public_key_bytes = crypto_public_key.public_bytes(encoding=serialization.Encoding.Raw,
-                                                             format=serialization.PublicFormat.Raw)
+    crypto_priv_key = x25519.X25519PrivateKey.generate()
+    crypto_priv_key_bytes = crypto_priv_key.private_bytes(encoding=serialization.Encoding.Raw,
+                                                          format=serialization.PrivateFormat.Raw,
+                                                          encryption_algorithm=serialization.NoEncryption())
+    crypto_pub_key = crypto_priv_key.public_key()
+    crypto_pub_key_bytes = crypto_pub_key.public_bytes(encoding=serialization.Encoding.Raw,
+                                                       format=serialization.PublicFormat.Raw)
 
-    crypto_private_key_byte_base_str = base64.b64encode(crypto_private_key_bytes, altchars=b'-~').decode("utf-8")
-    crypto_public_key_bytes_base_str = base64.b64encode(crypto_public_key_bytes, altchars=b'-~').decode("utf-8")
+    crypto_priv_key_byte_base_str = base64.b64encode(crypto_priv_key_bytes, altchars=b'-~').decode("utf-8")
+    crypto_pub_key_bytes_base_str = base64.b64encode(crypto_pub_key_bytes, altchars=b'-~').decode("utf-8")
 
-    signing_private_key = ed25519.Ed25519PrivateKey.generate()
-    signing_private_key_bytes = signing_private_key.private_bytes(encoding=serialization.Encoding.Raw,
-                                                                  format=serialization.PrivateFormat.Raw,
-                                                                  encryption_algorithm=serialization.NoEncryption())
-    signing_public_key = signing_private_key.public_key()
-    signing_public_key_bytes = signing_public_key.public_bytes(encoding=serialization.Encoding.Raw,
-                                                               format=serialization.PublicFormat.Raw)
+    signing_priv_key = ed25519.Ed25519PrivateKey.generate()
+    signing_priv_key_bytes = signing_priv_key.private_bytes(encoding=serialization.Encoding.Raw,
+                                                            format=serialization.PrivateFormat.Raw,
+                                                            encryption_algorithm=serialization.NoEncryption())
+    signing_pub_key = signing_priv_key.public_key()
+    signing_pub_key_bytes = signing_pub_key.public_bytes(encoding=serialization.Encoding.Raw,
+                                                         format=serialization.PublicFormat.Raw)
 
-    signing_private_key_byte_base_str = base64.b64encode(signing_private_key_bytes, altchars=b'-~').decode("utf-8")
-    signing_public_key_bytes_base_str = base64.b64encode(signing_public_key_bytes, altchars=b'-~').decode("utf-8")
+    signing_priv_key_byte_base_str = base64.b64encode(signing_priv_key_bytes, altchars=b'-~').decode("utf-8")
+    signing_pub_key_bytes_base_str = base64.b64encode(signing_pub_key_bytes, altchars=b'-~').decode("utf-8")
 
-    private_keys = f'{crypto_private_key_byte_base_str}{signing_private_key_byte_base_str}'
-    public_keys = f'{crypto_public_key_bytes_base_str}{signing_public_key_bytes_base_str}'
+    private_keys = f'{crypto_priv_key_byte_base_str}{signing_priv_key_byte_base_str}'
+    public_keys = f'{crypto_pub_key_bytes_base_str}{signing_pub_key_bytes_base_str}'
 
     return f'{public_keys}{private_keys}'
 
@@ -264,8 +274,8 @@ if __name__ == '__main__':
     )
 
     parser.add_argument('-n', '--name', required=True, help='The public name of the identity, included in emails.')
-    parser.add_argument('-a', '--algorithm', choices=[2], help='Encryption and signature algorithm (default: 2)',
-                        default=2)
+    parser.add_argument('-a', '--algorithm', choices=[2, 3], help='Encryption and signature algorithm (default: 2)',
+                        default=2, type=int)
     parser.add_argument('-p', '--picture', help='Path to image file')
     parser.add_argument('-d', '--description', help='Description of the identity, only displayed locally.')
     parser.add_argument('-f', '--filename', help='Full path to current identities file (default: identities.txt)',
